@@ -118,12 +118,13 @@ public class GameManager : MonoBehaviour
             map[x, y].x = x;
             map[x, y].y = y;
 
-            Debug.Log("The current cell Id is " + map[x,y].CellId + 
-                    " || The total of cells are " + ButtonScript.NumOfCells +
-                    " || The Coordinates are [" + map[x, y].x + "," + map[x, y].y + "]");
+            //Debug.Log("The current cell Id is " + map[x,y].CellId + 
+            //        " || The total of cells are " + ButtonScript.NumOfCells +
+            //        " || The Coordinates are [" + map[x, y].x + "," + map[x, y].y + "]");
         }            
     }
 
+    #region BombsMethods
     public int CheckBombNumber(int x, int y) 
     {
         int counter = 0;
@@ -157,8 +158,19 @@ public class GameManager : MonoBehaviour
                 counter++;
 
         return counter;
-    }
+    }    
+    private void NumbersOfBombs()
+    {
+        // Set the Range between a 20-40% of the Min and Max of Bombs
+        bombsAmount = Random.Range((int)(10 * 0.35f), (int)(width * height * 0.4f));
 
+        //// The board has only 10 buttons then it generates only 1 bomb
+        //if (width*height <= 10)        
+        //    bombsAmount = 1;
+        //// The board has between 10-30 buttons then it generates 7 bombs
+        //else if (width * height > 10 && width * height < 30 )
+        //    bombsAmount = 7;        
+    }
     void CreateBombs()
     {
         NumbersOfBombs();        
@@ -175,37 +187,9 @@ public class GameManager : MonoBehaviour
             
             map[x, y].bomb = true;
 
-            Debug.Log("Bomb assigned on [" + map[x, y].x + "," + map[x, y].y + "]" +
-                            "|| Still are pending " + (bombsAmount-(i+1)) + " bombs");
+            //Debug.Log("Bomb assigned on [" + map[x, y].x + "," + map[x, y].y + "]" +
+            //                "|| Still are pending " + (bombsAmount-(i+1)) + " bombs");
         }
-
-
-        //foreach(ButtonScript button in map)
-        //{
-        //    if (pendingBombs == 0)
-        //        break;
-        //    else if(Random.value > 0.5f)
-        //    {
-        //        button.bomb = true;
-        //        pendingBombs--;
-        //        Debug.Log("Bomb assigned on [" + button.x + "," + button.y + "]" +
-        //                    "|| Still are pending " + pendingBombs + " bombs");
-        //    }
-        //    else
-        //        button.bomb = false;
-        //}
     }
-
-    private void NumbersOfBombs()
-    {
-        // Set the Range between a 20-40% of the Min and Max of Bombs
-        bombsAmount = Random.Range((int)(10*0.2f),(int)(width*height*0.4f));
-
-        //// The board has only 10 buttons then it generates only 1 bomb
-        //if (width*height <= 10)        
-        //    bombsAmount = 1;
-        //// The board has between 10-30 buttons then it generates 7 bombs
-        //else if (width * height > 10 && width * height < 30 )
-        //    bombsAmount = 7;        
-    }
+    #endregion
 }

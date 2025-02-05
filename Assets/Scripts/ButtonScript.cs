@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
 
 public class ButtonScript : MonoBehaviour
 {
@@ -16,6 +18,10 @@ public class ButtonScript : MonoBehaviour
 
     // To know if the button has a bomb or not
     [SerializeField] public bool bomb;
+
+    // GO Components
+    private Button buttonPrefab;
+
     private void Awake()
     {
         numOfCells++;
@@ -27,30 +33,41 @@ public class ButtonScript : MonoBehaviour
         //y = numOfCells % GameManager.Gm.Height;         // Quotient of division
 
         //Debug.Log("The current cell Id is " + cellId + " || The total of cells are " + numOfCells + 
-        //            " || The Coordinates are [" + x + "," + y +"]");        
+        //            " || The Coordinates are [" + x + "," + y +"]");
+
+       buttonPrefab = GetComponent<Button>();
+
     }
 
     #region ButtonMethods
     public void Click()
     {
-
+        IsThereABomb();
     }
     void IsThereABomb()
     {
+        // Disable every button when it has been clicked at least once
+        buttonPrefab.interactable = false;
+
         if (bomb)
         {
-            //Game Over
-        }
+            
+            transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "*";
+            // Set the button image as a Bomb
+        }                                
         else
-        {
-            // Call to the GameManager to check the rest of cells
-            GameManager.Gm.CheckBombNumber(x,y);
-        }
+        {            
+            // Save the number of bombs around the button
+            // Call to the GameManager to check all the cells arond our button
+            int numOfBombsAround = GameManager.Gm.CheckBombNumber(x, y);
+
+            // Set the amount of bombs around the clicked button as the button text
+            transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = numOfBombsAround.ToString();
+        }                                
     }
     void ChangeColor()
     {
 
     }
-
     #endregion
 }
