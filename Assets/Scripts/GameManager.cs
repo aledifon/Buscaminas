@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
+using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
 
 public class GameManager : MonoBehaviour
 {
@@ -50,7 +51,7 @@ public class GameManager : MonoBehaviour
     #endregion 
 
     // Amount of bombs on the board
-    private int bombsAmount;
+    [SerializeField] private int bombsAmount;
 
     // Bidimensional array which contain all the Cells Info
     private ButtonScript[,] map;
@@ -157,12 +158,153 @@ public class GameManager : MonoBehaviour
         if (y > 0 && map[x, y - 1].bomb)             
                 counter++;
 
+        map[x, y].BombsAroundChecked = true;
+
         return counter;
-    }    
-    private void NumbersOfBombs()
+    }
+
+    // Open all the buttons with no-bomb around the clicked button
+    public void ClickAround_Old(int x, int y)
     {
+        int xTargetCell = x, yTargetCell = y;
+        bool cellToCheck = false;
+
+        // 1. Check the bombs of all the buttons around it (CheckBombNumber(x,y))
+        for (int i = 0; i < 8; i++)
+        {
+            cellToCheck = false;
+
+            switch (i)
+            {
+                // Left
+                case 0:
+                    xTargetCell = x - 1;
+                    yTargetCell = y;
+                    if (x > 0 &&
+                        !map[xTargetCell, yTargetCell].bomb &&
+                        !map[xTargetCell, yTargetCell].BombsAroundChecked)
+                        cellToCheck = true;
+                    break;
+                // Left-up
+                case 1:
+                    xTargetCell = x - 1;
+                    yTargetCell = y + 1;
+                    if (x > 0 && y < (height - 1) &&
+                        !map[xTargetCell, yTargetCell].bomb &&
+                        !map[xTargetCell, yTargetCell].BombsAroundChecked)
+                        cellToCheck = true;
+                    break;
+                // Up
+                case 2:
+                    xTargetCell = x;
+                    yTargetCell = y + 1;
+                    if (y < (height - 1) &&
+                        !map[x, y + 1].bomb &&
+                        !map[xTargetCell, yTargetCell].BombsAroundChecked)
+                        cellToCheck = true;
+                    break;
+                // Right-up
+                case 3:
+                    xTargetCell = x + 1;
+                    yTargetCell = y + 1;
+                    if (x < (width - 1) && y < (height - 1) &&
+                        !map[xTargetCell, yTargetCell].bomb &&
+                        !map[xTargetCell, yTargetCell].BombsAroundChecked)
+                        cellToCheck = true;
+                    break;
+                // Right
+                case 4:
+                    xTargetCell = x + 1;
+                    yTargetCell = y;
+                    if (x < (width - 1) &&
+                        !map[xTargetCell, yTargetCell].bomb &&
+                        !map[xTargetCell, yTargetCell].BombsAroundChecked)
+                        cellToCheck = true;
+                    break;
+                // Right-down
+                case 5:
+                    xTargetCell = x + 1;
+                    yTargetCell = y - 1;
+                    if (x < (width - 1) && y > 0 &&
+                        !map[xTargetCell, yTargetCell].bomb &&
+                        !map[xTargetCell, yTargetCell].BombsAroundChecked)
+                        cellToCheck = true;
+                    break;
+                // Down
+                case 6:
+                    xTargetCell = x;
+                    yTargetCell = y - 1;
+                    if (y > 0 &&
+                        !map[xTargetCell, yTargetCell].bomb &&
+                        !map[xTargetCell, yTargetCell].BombsAroundChecked)
+                        cellToCheck = true;
+                    break;
+                // Left-down
+                case 7:
+                    xTargetCell = x - 1;
+                    yTargetCell = y - 1;
+                    if (x > 0 && y > 0 &&
+                        !map[xTargetCell, yTargetCell].bomb &&
+                        !map[xTargetCell, yTargetCell].BombsAroundChecked)
+                        cellToCheck = true;
+                    break;
+            }
+            if (cellToCheck)
+            {
+                // If the requirements are met there will be check the bombs
+                // around the current Target cell
+                int targetCellBombs = CheckBombNumber(xTargetCell, yTargetCell);
+
+                // Write the number of bombs around the new Target Cell
+                // In case bombs>0 the cell text will be set as the number of bombs
+                // Oherwise, if bombs = 0 --> the cell text will be empty and
+                // 'ClickAround' will be called again for the new Cell To check
+                map[xTargetCell, yTargetCell].SetBombsAroundText(targetCellBombs);
+            }
+        }
+    }
+
+    // Open all the buttons with no-bomb around the clicked button
+    public void ClickAround(int x, int y)
+    {        
+        //Left Cells
+        if (x > 0)
+        {
+            // Left
+            map[x - 1, y].Click();
+            // Left-Up
+            if (y < (height - 1)) 
+                map[x - 1, y + 1].Click();
+            // Left-Down
+            if (y > 0)                      
+                map[x - 1, y - 1].Click();                              
+        }
+        // Right Cells
+        if (x < (width - 1))
+        {
+            // Right
+            map[x + 1, y].Click();
+            // Right-up
+            if (y < (height - 1)) 
+                map[x + 1, y + 1].Click();
+            // Right-Down
+            if (y > 0)            
+                map[x + 1, y - 1].Click();
+        }
+        // Up Cell
+        if (y < (height - 1))
+            map[x, y + 1].Click();
+        // Down Cell
+        if (y > 0)
+            map[x, y - 1].Click();
+    }
+
+    private void NumbersOfBombs()
+    {        
+        int numOfCells = width * height;
+
         // Set the Range between a 20-40% of the Min and Max of Bombs
-        bombsAmount = Random.Range((int)(10 * 0.35f), (int)(width * height * 0.4f));
+        bombsAmount = Random.Range((int)(numOfCells * 0.15f), (int)(numOfCells * 0.20f));
 
         //// The board has only 10 buttons then it generates only 1 bomb
         //if (width*height <= 10)        
