@@ -29,6 +29,9 @@ public class ButtonScript : MonoBehaviour
 
     // GO Components
     private Button buttonPrefab;
+    private Image buttonImage;
+
+    [SerializeField] private Sprite bombImage;
 
     private void Awake()
     {
@@ -44,7 +47,7 @@ public class ButtonScript : MonoBehaviour
         //            " || The Coordinates are [" + x + "," + y +"]");
 
        buttonPrefab = GetComponent<Button>();
-
+       buttonImage = GetComponent<Image>();
     }
 
     #region ButtonMethods
@@ -59,6 +62,9 @@ public class ButtonScript : MonoBehaviour
         GameObject objectSender = EventSystem.current?.currentSelectedGameObject;
 
         IsThereABomb(objectSender);
+
+        //if (!GameManager.Gm.ExplodeAll)
+        //    GameManager.Gm.PlaySuccessAudioClip();
     }
     void IsThereABomb(GameObject sender)
     {        
@@ -70,10 +76,27 @@ public class ButtonScript : MonoBehaviour
         // Disable the button when has been clicked once
         buttonPrefab.interactable = false;
 
+        // Avoid finding a bomb in the 1st click
+        // (Give a chance to the player)
+        if(GameManager.Gm.IsFirstClick)
+        {            
+            GameManager.Gm.IsFirstClick = false;
+            if (bomb)
+                bomb = false;
+        }            
+
         // The bomb will only be set in case we arrive here through a OnClick Event
-        if (bomb && (sender == gameObject))
+        if (bomb && (sender == gameObject || GameManager.Gm.Die))
         {
-            SetBombText();                        
+            SetBombText();
+            ChangeColorText(6);
+            SetBombImage();
+            GameManager.Gm.ExplodeMap();
+
+            // Show the Sad Emoji        
+            GameManager.Gm.SetSadEmoji();
+            // Play the Fail Audio clip
+            GameManager.Gm.PlayFailAudioClip();
         }
         else
         {
@@ -82,8 +105,28 @@ public class ButtonScript : MonoBehaviour
             int numOfBombsAround = GameManager.Gm.CheckBombNumber(x, y);
 
             // Set the amount of bombs around the clicked button as the button text            
-            SetBombsAroundText(numOfBombsAround);            
+            SetBombsAroundText(numOfBombsAround);
+
+            // Update the number of Remaining Cells for being clicked
+            GameManager.Gm.RemainingCells--;
+            Debug.Log("A total of " + GameManager.Gm.RemainingCells + " pending cells out of " +
+                       (GameManager.Gm.Width * GameManager.Gm.Height - GameManager.Gm.BombsAmount) + 
+                       " cells" );
         }        
+    }
+    public void SetBombImage()
+    {
+        buttonImage.color = Color.red;
+        buttonImage.sprite = bombImage;
+
+        ColorBlock colorBlock = new ColorBlock();
+        colorBlock = buttonPrefab.colors;
+        colorBlock.disabledColor = new Color(
+                                    colorBlock.disabledColor.r,
+                                    colorBlock.disabledColor.g,
+                                    colorBlock.disabledColor.b,
+                                    1f);
+        buttonPrefab.colors = colorBlock;
     }
     public void SetBombText()
     {
@@ -97,13 +140,21 @@ public class ButtonScript : MonoBehaviour
         {
             transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = bombsAround.ToString();
             ChangeColorText(bombsAround);
+            // Update the Emoji to 'Ups' expression
+            GameManager.Gm.SetUpsEmoji();
+            // Play the Win Audio Clip
+            GameManager.Gm.PlaySuccessAudioClip();
         }        
             
         // If the button has no bombs around then we'll check all the bombs around this one.
         else
         {
             transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "";            
-            GameManager.Gm.ClickAround(x, y);
+            GameManager.Gm.ClickAround(x, y);                       
+            // Update the Emoji to 'Glasses' expression            
+            GameManager.Gm.SetGlassesEmoji();
+            // Play the Win Audio Clip
+            GameManager.Gm.PlayWinAudioClip();
         }
     }
 

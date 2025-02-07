@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.UIElements;
-using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
+//using UnityEngine.UIElements;
+//using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -42,19 +43,61 @@ public class GameManager : MonoBehaviour
     private RectTransform rectTransform;
 
     [SerializeField] private Vector2 cellSize;
-    [SerializeField] private Vector2 spacing;    
-        
+    [SerializeField] private Vector2 spacing;
+
     [SerializeField] private int width;
-    public int Width {get { return width;}}
+    public int Width { get { return width; } }
+
     [SerializeField] private int height;
     public int Height { get { return height; } }
     #endregion 
 
     // Amount of bombs on the board
     [SerializeField] private int bombsAmount;
+    public int BombsAmount => bombsAmount;
+
+    private int remainingCells;
+    public int RemainingCells
+    {
+        get => remainingCells;
+        set => remainingCells = value;
+    }
+
+    // Death Flag
+    private bool die;
+    public bool Die { get { return die; } }
 
     // Bidimensional array which contain all the Cells Info
     private ButtonScript[,] map;
+
+    [Header("Emoji Images")]
+    public Image imageEmoji;
+    public Sprite[] images;
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip failAudioclip;
+    [SerializeField] private AudioClip successAudioclip;
+    [SerializeField] private AudioClip winAudioclip;
+    [SerializeField] private AudioClip restartAudioclip;
+
+    private AudioSource audioSource;
+    public bool AudiouSourceIsPlaying => audioSource != null && audioSource.isPlaying;
+    //public bool audiouSourceIsPlaying { get { return audioSource != null && audioSource.isPlaying;} }
+
+    // Emoji flags
+    private bool isEmojiCoroutineRunning;
+    public bool IsEmojiCoroutineRunning => isEmojiCoroutineRunning;
+    // Emoji Update State Timer
+    private float elapsedTime;
+    private float emojiMaxTime = 1f;
+
+    // 1st Click Flag
+    private bool isFirstClick = true;
+    public bool IsFirstClick
+    {
+        get => isFirstClick;
+        set => isFirstClick = value;
+    }
 
     //////////////////////////////////////////////////////////    
     // NOT USED FOR CLASSES INHERITED FROM MONOBEHAVIOUR /////
@@ -71,27 +114,29 @@ public class GameManager : MonoBehaviour
         if (gm == null)
         {
             gm = this;
-            DontDestroyOnLoad(gameObject); // Avoids the GO will be destroyed when the Scene changes
+            //DontDestroyOnLoad(gameObject); // Avoids the GO will be destroyed when the Scene changes
         }            
         // Otherwise, if does already exists an instance of the GameManager script then
         // we'll destroy the GO is attached to
         else
             Destroy(gameObject);
 
+        die = false;
+
         // Setup the Grid Layout component        
         GridLayoutSetup();
 
         rectTransform = gamePanel.GetComponent<RectTransform>();
 
-        // Init the bidiomensional array
-        map = new ButtonScript[width, height];
-
-        // Generate all the buttons and place them on the Grid Layout
-        GenerateButtons();
-
-        CreateBombs();
+        StartGame();
     }
 
+    private void Update()
+    {
+        CheckEmojiState();
+    }
+
+    #region SetupMethods
     void GridLayoutSetup()
     {
         gridLayout = gamePanel.GetComponent<GridLayoutGroup>();
@@ -103,7 +148,6 @@ public class GameManager : MonoBehaviour
         gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         gridLayout.constraintCount = width;
     }
-
     private void GenerateButtons()
     {
         for (int i = 0; i < width * height; i++)
@@ -124,6 +168,83 @@ public class GameManager : MonoBehaviour
             //        " || The Coordinates are [" + map[x, y].x + "," + map[x, y].y + "]");
         }            
     }
+    void CreateBombs()
+    {
+        //NumbersOfBombs();
+
+        for (int i = 0; i < bombsAmount; i++)
+        {
+            int x = 0, y = 0;
+
+            do
+            {
+                x = Random.Range(0, width - 1);
+                y = Random.Range(0, height - 1);
+            } while (map[x, y].bomb);
+
+            map[x, y].bomb = true;
+
+            //Debug.Log("Bomb assigned on [" + map[x, y].x + "," + map[x, y].y + "]" +
+            //                "|| Still are pending " + (bombsAmount-(i+1)) + " bombs");
+        }
+    }
+    private void NumbersOfBombs()
+    {
+        int numOfCells = width * height;
+
+        // Set the Range between a 20-40% of the Min and Max of Bombs
+        bombsAmount = Random.Range((int)(numOfCells * 0.15f), (int)(numOfCells * 0.20f));
+
+        //// The board has only 10 buttons then it generates only 1 bomb
+        //if (width*height <= 10)        
+        //    bombsAmount = 1;
+        //// The board has between 10-30 buttons then it generates 7 bombs
+        //else if (width * height > 10 && width * height < 30 )
+        //    bombsAmount = 7;        
+    }
+    private void StartGame()
+    {
+        // Set randomly the amount of bombs for every round
+        NumbersOfBombs();
+
+        // Init the bidiomensional array
+        map = new ButtonScript[width, height];
+
+        // The number of Cells to open in order to win
+        remainingCells = (width * height) - bombsAmount;    
+
+        // Generate all the buttons and place them on the Grid Layout
+        GenerateButtons();
+        // Create randomly all the bombs of the level
+        CreateBombs();
+
+        // Get the AudiouSource component
+        audioSource = GetComponent<AudioSource>();
+        audioSource.clip = successAudioclip;
+    }
+    public void Replay()
+    {
+        //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        //PlayRestartAudioClip();
+        StartCoroutine(nameof(RestartScene));
+    }
+    #endregion
+
+    #region RemainingCells
+    //public void RemoveRemainingCells()
+    //{
+    //    remainingCells--;
+    //}
+    #endregion
+
+    #region Coroutines
+    IEnumerator RestartScene()
+    {
+        PlayRestartAudioClip();
+        yield return new WaitWhile (() => AudiouSourceIsPlaying); 
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+    #endregion
 
     #region BombsMethods
     public int CheckBombNumber(int x, int y) 
@@ -299,39 +420,74 @@ public class GameManager : MonoBehaviour
             map[x, y - 1].Click();
     }
 
-    private void NumbersOfBombs()
-    {        
-        int numOfCells = width * height;
-
-        // Set the Range between a 20-40% of the Min and Max of Bombs
-        bombsAmount = Random.Range((int)(numOfCells * 0.15f), (int)(numOfCells * 0.20f));
-
-        //// The board has only 10 buttons then it generates only 1 bomb
-        //if (width*height <= 10)        
-        //    bombsAmount = 1;
-        //// The board has between 10-30 buttons then it generates 7 bombs
-        //else if (width * height > 10 && width * height < 30 )
-        //    bombsAmount = 7;        
-    }
-    void CreateBombs()
+    public void ExplodeMap()
     {
-        NumbersOfBombs();        
+        // Explode & Show all the bombs of the level and the rest of cells
+        die = true;
+        foreach (ButtonScript button in map)        
+            button.Click();  
+        
+        //// Show the Sad Emoji        
+        //SetSadEmoji();
 
-        for (int i=0;i<bombsAmount;i++)
+        //// Play the Fail Audio clip
+        //PlayFailAudioClip();
+    } 
+    #endregion
+
+    #region EmojiUpdate
+    private void CheckEmojiState()
+    {
+        // Keeps a diffent emoji than the default one for only 2s
+        if (!Die && imageEmoji.sprite != images[0])
         {
-            int x=0,y=0;
-
-            do
-            {
-                x = Random.Range(0, width-1);
-                y = Random.Range(0, height-1);
-            } while (map[x, y].bomb);
+            elapsedTime += Time.deltaTime;
             
-            map[x, y].bomb = true;
-
-            //Debug.Log("Bomb assigned on [" + map[x, y].x + "," + map[x, y].y + "]" +
-            //                "|| Still are pending " + (bombsAmount-(i+1)) + " bombs");
+            if (elapsedTime >= emojiMaxTime)
+            {
+                imageEmoji.sprite = images[0];
+                elapsedTime = 0f;
+            }                                            
         }
+    }
+    public void SetSadEmoji()
+    {
+        imageEmoji.sprite = images[1];
+    }
+    public void SetGlassesEmoji()
+    {        
+        imageEmoji.sprite = images[2];                
+    }
+    public void SetUpsEmoji()
+    {        
+        imageEmoji.sprite = images[3];        
+    }
+    #endregion
+
+    #region AudioManager
+    public void PlaySuccessAudioClip()
+    {        
+        PlayAudioClip(successAudioclip);
+    }
+    public void PlayWinAudioClip()
+    {
+        PlayAudioClip(winAudioclip);
+    }
+    public void PlayFailAudioClip()
+    {
+        PlayAudioClip(failAudioclip);
+    }
+    public void PlayRestartAudioClip()
+    {
+        //audioSource.Stop();
+        PlayAudioClip(restartAudioclip);
+    }
+
+    private void PlayAudioClip(AudioClip audioClip)
+    {
+        audioSource.clip = audioClip;
+        if (!audioSource.isPlaying)
+            audioSource.Play();
     }
     #endregion
 }

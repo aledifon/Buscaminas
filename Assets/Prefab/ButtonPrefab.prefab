@@ -149,6 +149,7 @@ MonoBehaviour:
   x: 0
   y: 0
   bomb: 0
+  bombImage: {fileID: 842802725, guid: bcbf7430b732bb24fb4ff1b3ecef67ec, type: 3}
 --- !u!1 &5936326712687580582
 GameObject:
   m_ObjectHideFlags: 0
