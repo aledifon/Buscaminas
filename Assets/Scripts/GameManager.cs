@@ -37,6 +37,7 @@ public class GameManager : MonoBehaviour
     }
 
     #region UIVars
+    [Header ("UI")]
     [SerializeField] private GameObject gameButton;
     [SerializeField] private GameObject gamePanel;
     private GridLayoutGroup gridLayout;
@@ -50,18 +51,18 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private int height;
     public int Height { get { return height; } }
+
+    [SerializeField] private GameObject winPanel;
     #endregion 
+
+    [Header ("Bombs")]
 
     // Amount of bombs on the board
     [SerializeField] private int bombsAmount;
     public int BombsAmount => bombsAmount;
 
     private int remainingCells;
-    public int RemainingCells
-    {
-        get => remainingCells;
-        set => remainingCells = value;
-    }
+    public int RemainingCells { get => remainingCells; }
 
     // Death Flag
     private bool die;
@@ -77,8 +78,10 @@ public class GameManager : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioClip failAudioclip;
     [SerializeField] private AudioClip successAudioclip;
+    [SerializeField] private AudioClip greatSuccessAudioclip;
     [SerializeField] private AudioClip winAudioclip;
     [SerializeField] private AudioClip restartAudioclip;
+    [SerializeField] private AudioClip rightClickAudioclip;
 
     private AudioSource audioSource;
     public bool AudiouSourceIsPlaying => audioSource != null && audioSource.isPlaying;
@@ -193,7 +196,8 @@ public class GameManager : MonoBehaviour
         int numOfCells = width * height;
 
         // Set the Range between a 20-40% of the Min and Max of Bombs
-        bombsAmount = Random.Range((int)(numOfCells * 0.15f), (int)(numOfCells * 0.20f));
+        //bombsAmount = Random.Range((int)(numOfCells * 0.15f), (int)(numOfCells * 0.20f));        
+        bombsAmount = 10; // WinPanel Test
 
         //// The board has only 10 buttons then it generates only 1 bomb
         //if (width*height <= 10)        
@@ -231,10 +235,20 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region RemainingCells
-    //public void RemoveRemainingCells()
-    //{
-    //    remainingCells--;
-    //}
+    public void UpdateRemainingCells()
+    {
+        remainingCells--;        
+        Debug.Log("A total of " + remainingCells + " pending cells out of " +
+                   (width * height - bombsAmount) + " cells");
+
+        if(die == false && remainingCells == 0)
+        {
+            // Show the Win Pannel
+            winPanel.SetActive(true);
+            // Play the Win Game Audio
+            PlayWinAudioClip();
+        }
+    }
     #endregion
 
     #region Coroutines
@@ -466,23 +480,36 @@ public class GameManager : MonoBehaviour
 
     #region AudioManager
     public void PlaySuccessAudioClip()
-    {        
+    {
+        audioSource.volume = 1f;
         PlayAudioClip(successAudioclip);
+    }
+    public void PlayGreatSuccessAudioClip()
+    {
+        audioSource.volume = 1f;
+        PlayAudioClip(greatSuccessAudioclip);
     }
     public void PlayWinAudioClip()
     {
+        audioSource.volume = 1f;
         PlayAudioClip(winAudioclip);
     }
     public void PlayFailAudioClip()
     {
+        audioSource.volume = 1f;
         PlayAudioClip(failAudioclip);
     }
     public void PlayRestartAudioClip()
     {
         //audioSource.Stop();
+        audioSource.volume = 1f;
         PlayAudioClip(restartAudioclip);
     }
-
+    public void PlayRightClickAudioClip()
+    {
+        audioSource.volume = 0.3f;
+        PlayAudioClip(rightClickAudioclip);
+    }
     private void PlayAudioClip(AudioClip audioClip)
     {
         audioSource.clip = audioClip;

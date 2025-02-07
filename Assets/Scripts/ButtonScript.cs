@@ -3,15 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
+using UnityEngine.Events;
+using UnityEngine.EventSystems;     // Needed to handle UI Events
 
-public class ButtonScript : MonoBehaviour
+public class ButtonScript : MonoBehaviour, IPointerClickHandler
 {
     private static int numOfCells;
     public static int NumOfCells {  get { return numOfCells; } } 
 
     private int cellId;
     public int CellId {  get { return cellId; } }
+
+    private enum SpriteToShow {UI = -1, Flag, Question, Bomb}
+    private SpriteToShow spriteToShow;
 
     // Know the button positions
     public int x;
@@ -25,18 +29,25 @@ public class ButtonScript : MonoBehaviour
     { 
         get {return bombsAroundChecked;}
         set { bombsAroundChecked = value;}
-    } 
+    }
 
-    // GO Components
+    [Header ("Sprites")]    
     private Button buttonPrefab;
     private Image buttonImage;
 
-    [SerializeField] private Sprite bombImage;
+    private Sprite uiSprite;
+    [SerializeField] private Sprite[] sprites;  // [0] = Flag || [1] = Question || [2] = Bomb
+
+    [Header ("On Right Click")]
+    public UnityEvent onRightClick;
 
     private void Awake()
     {
         numOfCells++;
         cellId = numOfCells - 1;
+
+        // Set the default value.
+        spriteToShow = SpriteToShow.UI;
 
         // CALCULATED ON THE GameManager.cs instead
         // Calculate of coordinates x(columnId) and y(rowId) of every cell                    
@@ -46,8 +57,12 @@ public class ButtonScript : MonoBehaviour
         //Debug.Log("The current cell Id is " + cellId + " || The total of cells are " + numOfCells + 
         //            " || The Coordinates are [" + x + "," + y +"]");
 
-       buttonPrefab = GetComponent<Button>();
-       buttonImage = GetComponent<Image>();
+        // Get GO components
+        buttonPrefab = GetComponent<Button>();
+        buttonImage = GetComponent<Image>();
+
+        // Get the UI Sprite
+        uiSprite = buttonImage.sprite;
     }
 
     #region ButtonMethods
@@ -66,6 +81,43 @@ public class ButtonScript : MonoBehaviour
         //if (!GameManager.Gm.ExplodeAll)
         //    GameManager.Gm.PlaySuccessAudioClip();
     }
+    public void RightClick()
+    {
+        // If the button is not interactable
+        if (!buttonPrefab.interactable)
+            return;        
+
+        // Update the Button Sprite in func. of the current Sprite
+        switch (spriteToShow)
+        {
+            case SpriteToShow.UI:
+                SetFlagSprite();
+                break;
+            case SpriteToShow.Flag:
+                SetQuestionSprite();
+                break;
+            case SpriteToShow.Question:
+                SetUISprite();
+                break;
+            default:
+                break;
+        }
+
+        // Play Right Click Audio Clip
+        GameManager.Gm.PlayRightClickAudioClip();
+    }
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        // If the clicked button is the right one then we'll Invoke the linked method
+        if (eventData.button == PointerEventData.InputButton.Right)
+        {
+            Debug.Log("Right Button pressed!");
+            onRightClick?.Invoke();
+        }
+        // Otherwise we'll exit it
+        else return;
+    }
+    #endregion
     void IsThereABomb(GameObject sender)
     {        
         //if (sender == gameObject)
@@ -90,7 +142,8 @@ public class ButtonScript : MonoBehaviour
         {
             SetBombText();
             ChangeColorText(6);
-            SetBombImage();
+            //SetBombImage();
+            SetBombSprite();
             GameManager.Gm.ExplodeMap();
 
             // Show the Sad Emoji        
@@ -103,31 +156,67 @@ public class ButtonScript : MonoBehaviour
             // Save the number of bombs around the button
             // Call to the GameManager to check all the cells arond our button
             int numOfBombsAround = GameManager.Gm.CheckBombNumber(x, y);
+            // Update the number of Remaining Cells for being clicked
+            GameManager.Gm.UpdateRemainingCells();
 
             // Set the amount of bombs around the clicked button as the button text            
             SetBombsAroundText(numOfBombsAround);
-
-            // Update the number of Remaining Cells for being clicked
-            GameManager.Gm.RemainingCells--;
-            Debug.Log("A total of " + GameManager.Gm.RemainingCells + " pending cells out of " +
-                       (GameManager.Gm.Width * GameManager.Gm.Height - GameManager.Gm.BombsAmount) + 
-                       " cells" );
         }        
     }
-    public void SetBombImage()
-    {
-        buttonImage.color = Color.red;
-        buttonImage.sprite = bombImage;
+    //private void SetBombImage()
+    //{
+    //    buttonImage.color = Color.red;
+    //    buttonImage.sprite = sprites[0];
 
-        ColorBlock colorBlock = new ColorBlock();
-        colorBlock = buttonPrefab.colors;
-        colorBlock.disabledColor = new Color(
-                                    colorBlock.disabledColor.r,
-                                    colorBlock.disabledColor.g,
-                                    colorBlock.disabledColor.b,
-                                    1f);
-        buttonPrefab.colors = colorBlock;
+    //    ColorBlock colorBlock = new ColorBlock();
+    //    colorBlock = buttonPrefab.colors;
+    //    colorBlock.disabledColor = new Color(
+    //                                colorBlock.disabledColor.r,
+    //                                colorBlock.disabledColor.g,
+    //                                colorBlock.disabledColor.b,
+    //                                1f);
+    //    buttonPrefab.colors = colorBlock;
+    //}    
+    #region Sprite_Methods
+    private void SetUISprite()
+    {
+        spriteToShow = SpriteToShow.UI;
+        SetSpriteImage(uiSprite, false);
     }
+    private void SetFlagSprite()
+    {
+        spriteToShow = SpriteToShow.Flag;
+        SetSpriteImage(sprites[(int)spriteToShow], spriteToShow == SpriteToShow.Bomb);
+    }
+    private void SetQuestionSprite()
+    {
+        spriteToShow = SpriteToShow.Question;
+        SetSpriteImage(sprites[(int)spriteToShow], spriteToShow == SpriteToShow.Bomb);
+    }
+    private void SetBombSprite()
+    {
+        spriteToShow = SpriteToShow.Bomb;
+        SetSpriteImage(sprites[(int)spriteToShow], spriteToShow == SpriteToShow.Bomb);
+    }
+    private void SetSpriteImage(Sprite newSprite, bool isSpriteBomb)
+    {        
+        buttonImage.sprite = newSprite;
+
+        if (isSpriteBomb)
+        {
+            buttonImage.color = Color.red;
+            ColorBlock colorBlock = new ColorBlock();
+            colorBlock = buttonPrefab.colors;
+            colorBlock.disabledColor = new Color(
+                                        colorBlock.disabledColor.r,
+                                        colorBlock.disabledColor.g,
+                                        colorBlock.disabledColor.b,
+                                        1f);
+            buttonPrefab.colors = colorBlock;
+        }
+    }
+    #endregion
+    #region BombsAndColorTextUpdate
     public void SetBombText()
     {
         transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "*";
@@ -154,10 +243,9 @@ public class ButtonScript : MonoBehaviour
             // Update the Emoji to 'Glasses' expression            
             GameManager.Gm.SetGlassesEmoji();
             // Play the Win Audio Clip
-            GameManager.Gm.PlayWinAudioClip();
+            GameManager.Gm.PlayGreatSuccessAudioClip();
         }
     }
-
     void ChangeColorText(int num)
     {
         switch (num)
