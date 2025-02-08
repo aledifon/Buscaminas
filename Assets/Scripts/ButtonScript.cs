@@ -8,6 +8,7 @@ using UnityEngine.EventSystems;     // Needed to handle UI Events
 
 public class ButtonScript : MonoBehaviour, IPointerClickHandler
 {
+    #region Variables
     private static int numOfCells;
     public static int NumOfCells {  get { return numOfCells; } } 
 
@@ -37,10 +38,14 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
 
     private Sprite uiSprite;
     [SerializeField] private Sprite[] sprites;  // [0] = Flag || [1] = Question || [2] = Bomb
+    #endregion
 
+    #region Events
     [Header ("On Right Click")]
     public UnityEvent onRightClick;
+    #endregion
 
+    #region UnityAPI
     private void Awake()
     {
         numOfCells++;
@@ -64,7 +69,9 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
         // Get the UI Sprite
         uiSprite = buttonImage.sprite;
     }
+    #endregion
 
+    #region PublicMethods
     #region ButtonMethods
     public void Click()
     {        
@@ -118,7 +125,37 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
         else return;
     }
     #endregion
-    void IsThereABomb(GameObject sender)
+    #region BombsAroundUpdate    
+    public void SetBombsAround(int bombsAround)
+    {
+        // Set the amount of bombs around the clicked button as the button text            
+        if (bombsAround > 0)
+        {
+            transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = bombsAround.ToString();
+            ChangeColorText(bombsAround);
+            // Update the Emoji to 'Ups' expression
+            GameManager.Gm.SetUpsEmoji();
+            // Play the Win Audio Clip
+            GameManager.Gm.PlaySuccessAudioClip();
+        }
+
+        // If the button has no bombs around then we'll check all the bombs around this one.
+        else
+        {
+            transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "";
+            GameManager.Gm.ClickAround(x, y);
+            // Update the Emoji to 'Glasses' expression            
+            GameManager.Gm.SetGlassesEmoji();
+            // Play the Win Audio Clip
+            GameManager.Gm.PlayGreatSuccessAudioClip();
+        }
+    }
+    #endregion
+    #endregion
+
+    #region PrivateMethods
+    #region CheckBombMethod
+    private void IsThereABomb(GameObject sender)
     {        
         //if (sender == gameObject)
         //    Debug.Log("Método Click llamado desde el botón en la UI.");
@@ -160,23 +197,10 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
             GameManager.Gm.UpdateRemainingCells();
 
             // Set the amount of bombs around the clicked button as the button text            
-            SetBombsAroundText(numOfBombsAround);
+            SetBombsAround(numOfBombsAround);
         }        
     }
-    //private void SetBombImage()
-    //{
-    //    buttonImage.color = Color.red;
-    //    buttonImage.sprite = sprites[0];
-
-    //    ColorBlock colorBlock = new ColorBlock();
-    //    colorBlock = buttonPrefab.colors;
-    //    colorBlock.disabledColor = new Color(
-    //                                colorBlock.disabledColor.r,
-    //                                colorBlock.disabledColor.g,
-    //                                colorBlock.disabledColor.b,
-    //                                1f);
-    //    buttonPrefab.colors = colorBlock;
-    //}    
+    #endregion        
     #region Sprite_Methods
     private void SetUISprite()
     {
@@ -216,37 +240,8 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
         }
     }
     #endregion
-    #region BombsAndColorTextUpdate
-    public void SetBombText()
-    {
-        transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "*";
-        // Set the button image as a Bomb
-    }
-    public void SetBombsAroundText(int bombsAround)
-    {
-        // Set the amount of bombs around the clicked button as the button text            
-        if (bombsAround > 0)
-        {
-            transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = bombsAround.ToString();
-            ChangeColorText(bombsAround);
-            // Update the Emoji to 'Ups' expression
-            GameManager.Gm.SetUpsEmoji();
-            // Play the Win Audio Clip
-            GameManager.Gm.PlaySuccessAudioClip();
-        }        
-            
-        // If the button has no bombs around then we'll check all the bombs around this one.
-        else
-        {
-            transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "";            
-            GameManager.Gm.ClickAround(x, y);                       
-            // Update the Emoji to 'Glasses' expression            
-            GameManager.Gm.SetGlassesEmoji();
-            // Play the Win Audio Clip
-            GameManager.Gm.PlayGreatSuccessAudioClip();
-        }
-    }
-    void ChangeColorText(int num)
+    #region TextMethods
+    private void ChangeColorText(int num)
     {
         switch (num)
         {
@@ -278,5 +273,11 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
                 break;
         }
     }
+    private void SetBombText()
+    {
+        transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "*";
+        // Set the button image as a Bomb
+    }
+    #endregion
     #endregion
 }
