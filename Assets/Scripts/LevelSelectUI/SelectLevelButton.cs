@@ -12,6 +12,7 @@ public class SelectLevelButton : MonoBehaviour, IPointerEnterHandler, IPointerEx
 
     private Outline outline;
 
+    #region UnityAPI
     void Start()
     {
         buttonImage = GetComponent<Image>();  // Obtiene la imagen del botón
@@ -21,30 +22,58 @@ public class SelectLevelButton : MonoBehaviour, IPointerEnterHandler, IPointerEx
         if(outline != null)
             outline.enabled = false;            // Hides the button oultine at the beginning
     }
+    #endregion
 
+    #region PublicMethods
     public void OnPointerEnter(PointerEventData eventData)
     {
         // Reproduce el sonido
         if (audioSource != null && hoverSound != null)        
             audioSource.PlayOneShot(hoverSound);
 
-        // Cambia el color del botón
-        if (buttonImage != null)
-            buttonImage.color = hoverColor;
-
-        // Shows the button oultine when hover the mouse
-        if (outline != null)
-            outline.enabled = true;            
+        HighlightButton();
     }
 
     public void OnPointerExit(PointerEventData eventData)
+    {                
+        FadeButton();
+    }
+    public void HighlightButton()
+    {
+        SetHoverColorButton();
+        ShowsOutlinedButton();
+    }
+    public void FadeButton()
+    {
+        SetOriginalColorButton();
+        HidesOutlinedButton();
+    }
+    #endregion
+
+    #region PrivateMethods
+    private void SetHoverColorButton()
+    {
+        // Cambia el color del botón
+        if (buttonImage != null)
+            buttonImage.color = hoverColor;
+    }
+    private void SetOriginalColorButton()
     {
         // Restaura el color original
         if (buttonImage != null)
             buttonImage.color = originalColor;
-
+    }
+    private void ShowsOutlinedButton()
+    {
+        // Shows the button oultine when hover the mouse
+        if (outline != null)
+            outline.enabled = true;
+    }
+    private void HidesOutlinedButton()
+    {
         // Hides the button oultine when exit the mouse
         if (outline != null)
             outline.enabled = false;
     }
+    #endregion
 }

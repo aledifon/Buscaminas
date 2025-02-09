@@ -22,15 +22,23 @@ public class MenuSelectButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         if (audioSource != null && hoverSound != null)        
             audioSource.PlayOneShot(hoverSound);
 
-        // Set the button image color as visible
-        if (buttonImage != null)        
-            buttonImage.color = new Color(buttonImage.color.r,buttonImage.color.g, buttonImage.color.b, 1f);        
+        HighlightButton();       
+    }
+    public void OnPointerExit(PointerEventData eventData)
+    {        
+        FadeButton();
     }
 
-    public void OnPointerExit(PointerEventData eventData)
+    public void HighlightButton()
+    {
+        // Set the button image color as visible
+        if (buttonImage != null)
+            buttonImage.color = new Color(buttonImage.color.r, buttonImage.color.g, buttonImage.color.b, 1f);
+    }
+    public void FadeButton()
     {
         // Set the button image color as transparent
         if (buttonImage != null)
-            buttonImage.color = new Color(buttonImage.color.r, buttonImage.color.g, buttonImage.color.b, 0f);       
+            buttonImage.color = new Color(buttonImage.color.r, buttonImage.color.g, buttonImage.color.b, 0f);
     }
 }

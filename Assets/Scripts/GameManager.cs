@@ -47,6 +47,12 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region UIVars
+    [Header("UIMenuButtons")]
+    [SerializeField] private MenuSelectButton menuPanelStartButton;
+    [SerializeField] private MenuSelectButton menuPanelOptionsButton;
+    [SerializeField] private SelectLevelButton selectLevelEasyButton;
+    [SerializeField] private SelectLevelButton selectLevelNormalButton;
+    [SerializeField] private SelectLevelButton selectLevelHardButton;
     [Header ("UI")]
     [SerializeField] private GameObject gameButton;
     [SerializeField] private GameObject backgroundPanel;
@@ -80,8 +86,8 @@ public class GameManager : MonoBehaviour
     public int RemainingCells { get => remainingCells; }
 
     // Death Flag
-    private bool die;
-    public bool Die { get { return die; } }
+    private bool isDied;
+    public bool IsDied { get { return isDied; } }
 
     // Bidimensional array which contain all the Cells Info
     private ButtonScript[,] map;
@@ -89,14 +95,19 @@ public class GameManager : MonoBehaviour
     [Header("Emoji Images")]
     public Image imageEmoji;
     public Sprite[] images;
+    
+    // Emoji Update State Timer
+    private float elapsedEmojiTime;
+    [SerializeField] private float emojiMaxTime = 1f;
 
-    [Header("Game Audio")]
+    [Header("Fx Audio")]
     [SerializeField] private AudioClip failAudioclip;
     [SerializeField] private AudioClip successAudioclip;
     [SerializeField] private AudioClip greatSuccessAudioclip;
     [SerializeField] private AudioClip winAudioclip;
     [SerializeField] private AudioClip restartAudioclip;
     [SerializeField] private AudioClip rightClickAudioclip;
+    [SerializeField] private AudioSource gameFXAudioSource;
 
     [Header("Menu Audio")]
     [SerializeField] private AudioClip gameAudioclip;
@@ -106,15 +117,13 @@ public class GameManager : MonoBehaviour
     [SerializeField] private AudioClip selectFXAudioclip;
 
     private AudioSource audioSource;
-    public bool AudiouSourceIsPlaying => audioSource != null && audioSource.isPlaying;
-    //public bool audiouSourceIsPlaying { get { return audioSource != null && audioSource.isPlaying;} }
+    public bool gameAudioFxIsPlaying => gameFXAudioSource != null && gameFXAudioSource.isPlaying;
+    //public bool audiouSourceIsPlaying { get { return audioSource != null && audioSource.isPlaying;} }    
 
+    [Header("Flags")]
     // Emoji flags
     private bool isEmojiCoroutineRunning;
     public bool IsEmojiCoroutineRunning => isEmojiCoroutineRunning;
-    // Emoji Update State Timer
-    private float elapsedTime;
-    private float emojiMaxTime = 1f;
 
     // 1st Click Flag
     private bool isFirstClick = true;
@@ -151,7 +160,7 @@ public class GameManager : MonoBehaviour
         else
             Destroy(gameObject);
 
-        die = false;
+        isDied = false;
 
         //// Setup the Grid Layout component        
         //GridLayoutSetup();
@@ -176,6 +185,7 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
+        //if (panelSelected == PanelSelected.Game)
         CheckEmojiState();
 
         // Check also if we are on the Pause Panel or not
@@ -202,6 +212,10 @@ public class GameManager : MonoBehaviour
         // Disable  the Menu Panel & Enable the SelectLevel Panel
         menuPanel.SetActive(false);
         levelSelectPanel.SetActive(true);
+
+        // Fade the Menu Panel buttons
+        menuPanelStartButton.FadeButton();
+        menuPanelOptionsButton.FadeButton();
 
         // Start playing Select Level Screen Audio
         PlaySelectLevelAudioClip();
@@ -231,6 +245,10 @@ public class GameManager : MonoBehaviour
         // Disable  the Menu Panel & Enable the Options Panel
         menuPanel.SetActive(false);
         optionsPanel.SetActive(true);
+
+        // Fade the Menu Panel buttons
+        menuPanelStartButton.FadeButton();
+        menuPanelOptionsButton.FadeButton();
 
         // Update the Panel Selected State
         panelSelected = PanelSelected.Options;
@@ -284,6 +302,10 @@ public class GameManager : MonoBehaviour
         //gamePanel.SetActive(true);
         backgroundPanel.SetActive(true);
 
+        // Fade the Menu Panel buttons
+        selectLevelEasyButton.FadeButton();
+        selectLevelNormalButton.FadeButton();
+        selectLevelHardButton.FadeButton();
 
         // Update the Panel Selected State
         panelSelected = PanelSelected.Game;
@@ -303,27 +325,28 @@ public class GameManager : MonoBehaviour
         //PlayRestartAudioClip();
         StartCoroutine(nameof(RestartScene));
     }
-    public void UpdateRemainingCells()
+    public void UpdateRemainingCells(bool isIncrement)
     {
-        remainingCells--;
+        if (isIncrement)        
+            remainingCells++;                    
+        else        
+            remainingCells--;                    
         Debug.Log("A total of " + remainingCells + " pending cells out of " +
-                   (width * height - bombsAmount) + " cells");
+                       (width * height - bombsAmount) + " cells");
 
-        if (die == false && remainingCells == 0)
+        if (isDied == false && remainingCells == 0)
         {
+                // Hides the Title pannel & Show the Win Pannel
+                titlePanel.SetActive(false);
+                winPanel.SetActive(true);
 
-            // Hides the Title pannel & Show the Win Pannel
-            titlePanel.SetActive(false);
-            winPanel.SetActive(true);
+                // Update the Panel Selected State
+                panelSelected = PanelSelected.Win;
 
-            // Update the Panel Selected State
-            panelSelected = PanelSelected.Win;
-
-            // Play the Win Game Audio
-            PlayWinAudioClip();
-        }
-    }
-
+                // Play the Win Game Audio
+                PlayWinAudioClip();
+        }        
+    }    
     #region BombsMethods
     public int CheckBombNumber(int x, int y)
     {
@@ -501,7 +524,7 @@ public class GameManager : MonoBehaviour
     public void ExplodeMap()
     {
         // Explode & Show all the bombs of the level and the rest of cells
-        die = true;
+        isDied = true;
         foreach (ButtonScript button in map)
             button.Click();
 
@@ -516,8 +539,12 @@ public class GameManager : MonoBehaviour
     #region AudioMenuMethods
     public void PlayGameAudioClip()
     {
-        audioSource.volume = 0.5f;
+        audioSource.volume = 0.3f;
         PlayAudioClip(gameAudioclip);
+    }
+    public void StopAudioSourceClip()
+    {
+        audioSource.Stop();
     }
     public void PlayTitleAudioClip()
     {
@@ -545,49 +572,57 @@ public class GameManager : MonoBehaviour
     }
     public void PlaySuccessAudioClip()
     {
-        audioSource.volume = 1f;
-        PlayAudioClip(successAudioclip);
+        gameFXAudioSource.volume = 1f;
+        PlayAudioGameFXClip(successAudioclip);
     }    
     public void PlayGreatSuccessAudioClip()
     {
-        audioSource.volume = 1f;
-        PlayAudioClip(greatSuccessAudioclip);
+        gameFXAudioSource.volume = 1f;
+        PlayAudioGameFXClip(greatSuccessAudioclip);
     }
     public void PlayWinAudioClip()
     {
-        audioSource.volume = 1f;
-        PlayAudioClip(winAudioclip);
+        gameFXAudioSource.volume = 1f;
+        PlayAudioGameFXClip(winAudioclip);
     }
     public void PlayFailAudioClip()
     {
-        audioSource.volume = 1f;
-        PlayAudioClip(failAudioclip);
+        gameFXAudioSource.volume = 1f;
+        PlayAudioGameFXClip(failAudioclip);
     }
     public void PlayRestartAudioClip()
     {
         //audioSource.Stop();
-        audioSource.volume = 1f;
-        PlayAudioClip(restartAudioclip);
+        gameFXAudioSource.volume = 1f;
+        PlayAudioGameFXClip(restartAudioclip);
     }
     public void PlayRightClickAudioClip()
     {
-        audioSource.volume = 0.3f;
-        PlayAudioClip(rightClickAudioclip);
+        gameFXAudioSource.volume = 0.3f;
+        PlayAudioGameFXClip(rightClickAudioclip);
     }
     #endregion
 
     #region EmojiMethods
+    public void SetNormalEmoji()
+    {
+        imageEmoji.sprite = images[0];
+        elapsedEmojiTime = 0f;
+    }
     public void SetSadEmoji()
     {
         imageEmoji.sprite = images[1];
+        elapsedEmojiTime = 0f;
     }
     public void SetGlassesEmoji()
     {
         imageEmoji.sprite = images[2];
+        elapsedEmojiTime = 0f;
     }
     public void SetUpsEmoji()
     {
         imageEmoji.sprite = images[3];
+        elapsedEmojiTime = 0f;
     }
     #endregion
     #endregion
@@ -693,7 +728,12 @@ public class GameManager : MonoBehaviour
         //    bombsAmount = 7;        
     }
     private void StartGame()
-    {
+    {        
+        // Reset the boolean flags (isDied & isFirstClick)
+        ResetFlags();        
+        // Set the initial Emoji
+        SetNormalEmoji();
+
         // Set randomly the amount of bombs for every round
         NumbersOfBombs();
 
@@ -720,6 +760,12 @@ public class GameManager : MonoBehaviour
     {
         foreach(Transform child in gamePanel.transform)
             Destroy(child.gameObject);
+    }
+    private void ResetFlags()
+    {
+        // Reset the Died & FirstClick Flags
+        isDied = false;
+        isFirstClick = true;
     }
     #endregion
 
@@ -750,12 +796,8 @@ public class GameManager : MonoBehaviour
     private IEnumerator RestartScene()
     {
         PlayRestartAudioClip();
-        yield return new WaitWhile (() => AudiouSourceIsPlaying);
-        //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-
-        //// Destroy all the GamePanel children (All buttons instances) in case it has any children.
-        //if (gamePanel.transform.childCount>0)
-        //    DestroyGamePanelChildren();
+        yield return new WaitWhile (() => gameAudioFxIsPlaying);
+        //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);        
 
         // Create again the Board Panel
         StartGame();
@@ -771,20 +813,26 @@ public class GameManager : MonoBehaviour
         if (!audioSource.isPlaying)
             audioSource.Play();
     }
+    private void PlayAudioGameFXClip(AudioClip audioClip)
+    {
+        gameFXAudioSource.clip = audioClip;
+        if (!gameFXAudioSource.isPlaying)
+            gameFXAudioSource.Play();
+    }
     #endregion
 
     #region EmojiUpdate
     private void CheckEmojiState()
     {
         // Keeps a diffent emoji than the default one for only 2s
-        if (!Die && imageEmoji.sprite != images[0])
+        if (!isDied && imageEmoji.sprite != images[0])
         {
-            elapsedTime += Time.deltaTime;
+            elapsedEmojiTime += Time.deltaTime;
             
-            if (elapsedTime >= emojiMaxTime)
+            if (elapsedEmojiTime >= emojiMaxTime)
             {
                 imageEmoji.sprite = images[0];
-                elapsedTime = 0f;
+                elapsedEmojiTime = 0f;
             }                                            
         }
     }

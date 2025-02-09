@@ -170,12 +170,13 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
         if(GameManager.Gm.IsFirstClick)
         {            
             GameManager.Gm.IsFirstClick = false;
+            GameManager.Gm.UpdateRemainingCells(true);      // Add +1 to fix the Cell Count
             if (bomb)
                 bomb = false;
         }            
 
         // The bomb will only be set in case we arrive here through a OnClick Event
-        if (bomb && (sender == gameObject || GameManager.Gm.Die))
+        if (bomb && (sender == gameObject || GameManager.Gm.IsDied))
         {
             SetBombText();
             ChangeColorText(6);
@@ -187,6 +188,8 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
             GameManager.Gm.SetSadEmoji();
             // Play the Fail Audio clip
             GameManager.Gm.PlayFailAudioClip();
+            // Stop the Game Audio clip
+            GameManager.Gm.StopAudioSourceClip();
         }
         else
         {
@@ -194,7 +197,7 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
             // Call to the GameManager to check all the cells arond our button
             int numOfBombsAround = GameManager.Gm.CheckBombNumber(x, y);
             // Update the number of Remaining Cells for being clicked
-            GameManager.Gm.UpdateRemainingCells();
+            GameManager.Gm.UpdateRemainingCells(false);
 
             // Set the amount of bombs around the clicked button as the button text            
             SetBombsAround(numOfBombsAround);
