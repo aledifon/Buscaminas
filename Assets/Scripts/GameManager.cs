@@ -6,6 +6,7 @@ using UnityEngine.UI;
 //using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
+using static UnityEditor.ShaderData;
 
 public class GameManager : MonoBehaviour
 {
@@ -38,17 +39,22 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    #region
+    #region Enums
     private enum LevelSelected { None = -1, Easy, Normal, Hard}
     [SerializeField] private LevelSelected levelSelected = LevelSelected.None;
+    private enum PanelSelected {Title, Menu, Options, LevelSelection, Game, Pause, Win}
+    [SerializeField] private PanelSelected panelSelected = PanelSelected.Title;
     #endregion
 
     #region UIVars
     [Header ("UI")]
     [SerializeField] private GameObject gameButton;
-    [SerializeField] private GameObject gamePanel;
+    [SerializeField] private GameObject backgroundPanel;
+    [SerializeField] private GameObject gamePanel;    
     [SerializeField] private GameObject titlePanel;
+    [SerializeField] private GameObject menuPanel;
     [SerializeField] private GameObject levelSelectPanel;
+    [SerializeField] private GameObject optionsPanel;
     [SerializeField] private GameObject pauseLevelPanel;
     [SerializeField] private GameObject winPanel;
     private GridLayoutGroup gridLayout;
@@ -117,6 +123,9 @@ public class GameManager : MonoBehaviour
         get => isFirstClick;
         set => isFirstClick = value;
     }
+
+    // Pause Flag
+    private bool isPaused = false;
     #endregion
 
     //////////////////////////////////////////////////////////    
@@ -158,6 +167,11 @@ public class GameManager : MonoBehaviour
         //GridLayoutSetup();
 
         //StartGame();
+
+        // Enable the TitlePanel Screen
+        titlePanel.SetActive(true);        
+        // Update the Panel Selected State
+        panelSelected = PanelSelected.Title;
     }
 
     private void Update()
@@ -165,33 +179,72 @@ public class GameManager : MonoBehaviour
         CheckEmojiState();
 
         // Check also if we are on the Pause Panel or not
-        if (Input.GetKeyDown(KeyCode.P))
+        if ((panelSelected == PanelSelected.Game || panelSelected == PanelSelected.Pause) && Input.GetKeyDown(KeyCode.P))
         {
-            if (pauseLevelPanel.activeSelf)
-            {
-                audioSource.Play();
-                pauseLevelPanel.SetActive(false);                
-            }
-            else
-            {
-                audioSource.Pause();
-                pauseLevelPanel.SetActive(true);                
-            }                
+            TooglePause();
         }
     }
     #endregion
 
     #region Public_Methods
     #region ButtonMethods
-    public void OnStartButtonClick()
+    public void OnTitleScreenClick()
     {
-        // Disable  the TitlePanel Screen & Enable the SelectLevel Panel
+        // Disable  the TitlePanel Screen & Enable the Menu Panel
         titlePanel.SetActive(false);
+        menuPanel.SetActive(true);
+
+        // Update the Panel Selected State
+        panelSelected = PanelSelected.Menu;        
+    }
+    public void OnToLevelSelectorButtonClick()
+    {
+        // Disable  the Menu Panel & Enable the SelectLevel Panel
+        menuPanel.SetActive(false);
         levelSelectPanel.SetActive(true);
 
         // Start playing Select Level Screen Audio
         PlaySelectLevelAudioClip();
+
+        // Update the Panel Selected State
+        panelSelected = PanelSelected.LevelSelection;
     }
+    public void OnExitGameButtonClick()
+    {
+        // Disable  the Menu Panel & Enable the SelectLevel Panel
+        //gamePanel.SetActive(false);
+        backgroundPanel.SetActive(false);
+        levelSelectPanel.SetActive(true);
+
+        // Unset the Level Selected
+        levelSelected = LevelSelected.None;
+
+        // Start playing Select Level Screen Audio
+        PlaySelectLevelAudioClip();
+
+        // Update the Panel Selected State
+        panelSelected = PanelSelected.LevelSelection;
+    }
+
+    public void OnToOptionsButtonClick()
+    {
+        // Disable  the Menu Panel & Enable the Options Panel
+        menuPanel.SetActive(false);
+        optionsPanel.SetActive(true);
+
+        // Update the Panel Selected State
+        panelSelected = PanelSelected.Options;
+    }
+    public void OnExitOptionsScreenClick()
+    {
+        // Disable  the Options Panel & Enable the Menu panel
+        optionsPanel.SetActive(false);
+        menuPanel.SetActive(true);        
+
+        // Update the Panel Selected State
+        panelSelected = PanelSelected.Menu;
+    }
+
     public void OnSelectModeClick()
     {        
         // Checked which Level Button has been clicked and set the corresponding Level Mode
@@ -228,7 +281,12 @@ public class GameManager : MonoBehaviour
 
         // Disable  the SelectLevel Panel & Enable the Game Panel      
         levelSelectPanel.SetActive(false);
-        gamePanel.SetActive(true);
+        //gamePanel.SetActive(true);
+        backgroundPanel.SetActive(true);
+
+
+        // Update the Panel Selected State
+        panelSelected = PanelSelected.Game;
 
         // Create the Board Panel with the corresponding cells and bombs number
         // according to the Level difficulty
@@ -253,8 +311,14 @@ public class GameManager : MonoBehaviour
 
         if (die == false && remainingCells == 0)
         {
-            // Show the Win Pannel
+
+            // Hides the Title pannel & Show the Win Pannel
+            titlePanel.SetActive(false);
             winPanel.SetActive(true);
+
+            // Update the Panel Selected State
+            panelSelected = PanelSelected.Win;
+
             // Play the Win Game Audio
             PlayWinAudioClip();
         }
@@ -637,7 +701,11 @@ public class GameManager : MonoBehaviour
         map = new ButtonScript[width, height];
 
         // The number of Cells to open in order to win
-        remainingCells = (width * height) - bombsAmount;    
+        remainingCells = (width * height) - bombsAmount;
+
+        // Destroy all the GamePanel children (All buttons instances) in case it has any children.
+        if (gamePanel.transform.childCount > 0)
+            DestroyGamePanelChildren();
 
         // Generate all the buttons and place them on the Grid Layout
         GenerateButtons();
@@ -647,15 +715,52 @@ public class GameManager : MonoBehaviour
         // Set the success Audioclip
         //audioSource = GetComponent<AudioSource>();
         //audioSource.clip = successAudioclip;
-    }    
+    }
+    private void DestroyGamePanelChildren()
+    {
+        foreach(Transform child in gamePanel.transform)
+            Destroy(child.gameObject);
+    }
+    #endregion
+
+    #region Pause
+    private void TooglePause()
+    {
+        isPaused = !isPaused;
+
+        if (isPaused)
+        {
+            Time.timeScale = 0f;                // Stops the game (stop the physics and pending updates which are time dependent)
+            audioSource.Pause();
+            pauseLevelPanel.SetActive(true);
+            // Update the Panel Selected State
+            panelSelected = PanelSelected.Pause;
+        }
+        else
+        {
+            Time.timeScale = 1f;                // Resumes the game
+            audioSource.Play();
+            pauseLevelPanel.SetActive(false);
+            panelSelected = PanelSelected.Game;
+        }
+    }
     #endregion
 
     #region Coroutines
     private IEnumerator RestartScene()
     {
         PlayRestartAudioClip();
-        yield return new WaitWhile (() => AudiouSourceIsPlaying); 
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        yield return new WaitWhile (() => AudiouSourceIsPlaying);
+        //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+
+        //// Destroy all the GamePanel children (All buttons instances) in case it has any children.
+        //if (gamePanel.transform.childCount>0)
+        //    DestroyGamePanelChildren();
+
+        // Create again the Board Panel
+        StartGame();
+        // Start playing Gamen Audio again
+        PlayGameAudioClip();
     }
     #endregion
 
