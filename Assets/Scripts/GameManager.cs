@@ -6,7 +6,7 @@ using UnityEngine.UI;
 //using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
-using static UnityEditor.ShaderData;
+//using static UnityEditor.ShaderData;
 using TMPro;
 
 public class GameManager : MonoBehaviour
