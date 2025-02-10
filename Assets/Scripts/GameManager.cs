@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using static UnityEditor.ShaderData;
+using TMPro;
 
 public class GameManager : MonoBehaviour
 {
@@ -63,6 +64,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject optionsPanel;
     [SerializeField] private GameObject pauseLevelPanel;
     [SerializeField] private GameObject winPanel;
+    [SerializeField] private TextMeshProUGUI textCellsToWin;
     private GridLayoutGroup gridLayout;
     private RectTransform rectTransform;
 
@@ -327,18 +329,24 @@ public class GameManager : MonoBehaviour
     }
     public void UpdateRemainingCells(bool isIncrement)
     {
-        if (isIncrement)        
-            remainingCells++;                    
-        else        
-            remainingCells--;                    
-        Debug.Log("A total of " + remainingCells + " pending cells out of " +
-                       (width * height - bombsAmount) + " cells");
+        if (!IsDied) 
+        { 
+            if (isIncrement)
+                remainingCells++;
+            else
+                remainingCells--;
+        }
+        //Debug.Log("A total of " + remainingCells + " pending cells out of " +
+        //               (width * height - bombsAmount) + " cells");
+
+        // Update the TextMeshPro of the Game Panel
+        TextCellsToWinUpdate();
 
         if (isDied == false && remainingCells == 0)
         {
                 // Hides the Title pannel & Show the Win Pannel
-                titlePanel.SetActive(false);
-                winPanel.SetActive(true);
+                backgroundPanel.SetActive(false);
+                winPanel.SetActive(true);                
 
                 // Update the Panel Selected State
                 panelSelected = PanelSelected.Win;
@@ -539,7 +547,8 @@ public class GameManager : MonoBehaviour
     #region AudioMenuMethods
     public void PlayGameAudioClip()
     {
-        audioSource.volume = 0.3f;
+        audioSource.volume = 0.4f;
+        audioSource.loop = true;
         PlayAudioClip(gameAudioclip);
     }
     public void StopAudioSourceClip()
@@ -549,11 +558,13 @@ public class GameManager : MonoBehaviour
     public void PlayTitleAudioClip()
     {
         audioSource.volume = 0.5f;
+        audioSource.loop = true;
         PlayAudioClip(titleAudioclip);
     }
     public void PlaySelectLevelAudioClip()
     {
         audioSource.volume = 0.3f;
+        audioSource.loop = true;
         PlayAudioClip(selectLevelAudioclip);
     }
     #endregion
@@ -563,11 +574,13 @@ public class GameManager : MonoBehaviour
     public void PlayPauseAudioClip()
     {
         audioSource.volume = 1f;
+        audioSource.loop = false;
         PlayAudioClip(pauseAudioclip);
     }
     public void PlaySelectionFXAudioClip()
     {
         audioSource.volume = 1f;
+        audioSource.loop = false;
         PlayAudioClip(selectFXAudioclip);
     }
     public void PlaySuccessAudioClip()
@@ -743,6 +756,9 @@ public class GameManager : MonoBehaviour
         // The number of Cells to open in order to win
         remainingCells = (width * height) - bombsAmount;
 
+        // Update the TextMeshPro of the Game Panel
+        TextCellsToWinUpdate();
+
         // Destroy all the GamePanel children (All buttons instances) in case it has any children.
         if (gamePanel.transform.childCount > 0)
             DestroyGamePanelChildren();
@@ -799,6 +815,13 @@ public class GameManager : MonoBehaviour
         yield return new WaitWhile (() => gameAudioFxIsPlaying);
         //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);        
 
+        // Disable the Win Panel (In case we come from there) & Enable the Background(Game) Panel      
+        winPanel.SetActive(false);        
+        backgroundPanel.SetActive(true);        
+
+        // Update the Panel Selected State
+        panelSelected = PanelSelected.Game;
+
         // Create again the Board Panel
         StartGame();
         // Start playing Gamen Audio again
@@ -809,7 +832,7 @@ public class GameManager : MonoBehaviour
     #region AudioManager
     private void PlayAudioClip(AudioClip audioClip)
     {
-        audioSource.clip = audioClip;
+        audioSource.clip = audioClip;        
         if (!audioSource.isPlaying)
             audioSource.Play();
     }
@@ -837,5 +860,13 @@ public class GameManager : MonoBehaviour
         }
     }
     #endregion
+
+    #region TextUIUpdate
+    private void TextCellsToWinUpdate()
+    {
+        textCellsToWin.text = "x" + remainingCells.ToString();
+    }
+    #endregion
+
     #endregion
 }

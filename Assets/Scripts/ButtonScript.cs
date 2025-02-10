@@ -133,6 +133,8 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
         {
             transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = bombsAround.ToString();
             ChangeColorText(bombsAround);
+            // Assure the UI Sprite is shown on the cell (In case the cell was marked)
+            SetUISprite();
             // Update the Emoji to 'Ups' expression
             GameManager.Gm.SetUpsEmoji();
             // Play the Win Audio Clip
@@ -143,6 +145,9 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
         else
         {
             transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "";
+            // Assure the UI Sprite is shown on the cell (In case the cell was marked)
+            SetUISprite();
+            // Call the Click Around Method
             GameManager.Gm.ClickAround(x, y);
             // Update the Emoji to 'Glasses' expression            
             GameManager.Gm.SetGlassesEmoji();
@@ -169,10 +174,12 @@ public class ButtonScript : MonoBehaviour, IPointerClickHandler
         // (Give a chance to the player)
         if(GameManager.Gm.IsFirstClick)
         {            
-            GameManager.Gm.IsFirstClick = false;
-            GameManager.Gm.UpdateRemainingCells(true);      // Add +1 to fix the Cell Count
+            GameManager.Gm.IsFirstClick = false;            
             if (bomb)
+            {
                 bomb = false;
+                GameManager.Gm.UpdateRemainingCells(true);      // Add +1 to fix the Cell Count
+            }                
         }            
 
         // The bomb will only be set in case we arrive here through a OnClick Event
