@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 //using static UnityEditor.ShaderData;
 using TMPro;
+using UnityEditor;
 
 public class GameManager : MonoBehaviour
 {
@@ -39,6 +40,9 @@ public class GameManager : MonoBehaviour
             return gm;
         }
     }
+
+    public static readonly bool isWebGL = Application.platform == RuntimePlatform.WebGLPlayer;
+    //public static readonly bool isWebGL = false;     // true = WebGL, false = Windows
 
     #region Enums
     private enum LevelSelected { None = -1, Easy, Normal, Hard}
@@ -191,7 +195,8 @@ public class GameManager : MonoBehaviour
         CheckEmojiState();
 
         // Check also if we are on the Pause Panel or not
-        if ((panelSelected == PanelSelected.Game || panelSelected == PanelSelected.Pause) && Input.GetKeyDown(KeyCode.P))
+        if (/*(panelSelected == PanelSelected.Game || panelSelected == PanelSelected.Pause) && */
+            (Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.Escape)))
         {
             TooglePause();
         }
@@ -318,9 +323,29 @@ public class GameManager : MonoBehaviour
 
         // Start playing Gamen Audio
         PlayGameAudioClip();
-    }            
-        
-    #endregion
+    }   
+    public void OnQuitGame()
+    {
+        if (isWebGL)
+            ReplayScene();
+        else
+            QuitGame();
+    }
+    public void QuitGame()
+    {
+        #if UNITY_EDITOR
+            EditorApplication.ExitPlaymode();
+        #else
+            Application.Quit();            
+        #endif
+    }    
+
+#endregion
+    // Called only when game is run from the WebGLPlayer Runtime
+    public void ReplayScene()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
     public void Replay()
     {
         //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
@@ -638,7 +663,7 @@ public class GameManager : MonoBehaviour
         elapsedEmojiTime = 0f;
     }
     #endregion
-    #endregion
+#endregion
 
     #region Private_Methods
     #region SetupMethods
@@ -803,7 +828,7 @@ public class GameManager : MonoBehaviour
             Time.timeScale = 1f;                // Resumes the game
             audioSource.Play();
             pauseLevelPanel.SetActive(false);
-            panelSelected = PanelSelected.Game;
+            panelSelected = PanelSelected.Game;     // As the Pause can be launch from any Panel this could be wrong (NEEDED TO UPDATE!)
         }
     }
     #endregion

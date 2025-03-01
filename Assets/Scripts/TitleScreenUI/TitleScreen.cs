@@ -11,6 +11,7 @@ public class TitleScreen : MonoBehaviour, IPointerClickHandler
     private Color firstColor;
     [SerializeField] private Color lastColor;
     [SerializeField] private float fadeDuration;
+    [SerializeField] private TextMeshProUGUI buildNumberText;
 
     // Boolean Flags
     private bool isFading = false;     
@@ -24,6 +25,13 @@ public class TitleScreen : MonoBehaviour, IPointerClickHandler
             firstColor = textMeshProUGUI.color;
         else
             Debug.LogWarning("The TextMeshPro object is null");
+
+        if (buildNumberText != null)
+        {
+            buildNumberText.text = "Build " + Application.version;
+        }
+        else
+            Debug.LogWarning("The BuildVersionText object is null");
     }
 
     // Update is called once per frame
